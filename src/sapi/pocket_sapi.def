@@ -1,0 +1,4 @@
+LIBRARY pocket_sapi
+EXPORTS
+    DllGetClassObject
+    DllCanUnloadNow

@@ -1,0 +1,23 @@
+# Generated installers, test installs, downloaded model weights, and build files
+/build/
+/.benchmark-cache/
+/.benchmark-cache-*/
+/.benchmark-venv/
+
+# Local benchmark captures can contain cloned or personal voices
+/results/
+
+# Locally generated/downloaded voice states and source prompt audio
+/assets/*.safetensors
+/assets/*.wav
+
+# Compiler and runtime output
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+__pycache__/
+*.py[cod]

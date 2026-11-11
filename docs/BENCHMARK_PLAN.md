@@ -1,0 +1,34 @@
+# Gate 1: official-model Windows benchmark
+
+Status: **initial benchmark executed 2026-11-05**. See [MILESTONE_1_BENCHMARK.md](MILESTONE_1_BENCHMARK.md). This plan remains the procedure for repeat runs; the initial result is HOLD pending listening review and Rust runtime measurement.
+
+## Inputs and reproducibility
+
+Use the official `english_18m_2026-10`, `english_7m_2026-10`, and `english_2m_2026-10` **voice-cloning** configurations. Record exact Pocket TTS version/commit, model and tokenizer revisions/hashes, runtime version, Windows build, CPU, logical cores, RAM, power mode, antivirus state, and thread count. Start with the official v4.0.1 Python CLI and official Windows x86_64 binary if both are workable. Keep separate clean install/cache directories per runtime. Optionally test `_refl` variants after the base three; do not replace a base result with a `_refl` result without labeling it. Obtain upstream gated-model access and use only prompts whose speakers authorized this testing.
+
+## Measurement matrix
+
+| Area | Procedure and report |
+| --- | --- |
+| Download/install size | Record total bytes transferred, compressed archive/wheels, model and prompt-encoder/tokenizer assets, fully installed files, and first-run cache. Repeat after cache clearing. Report the complete offline payload projection for each model, including shared assets and proposed runtime. |
+| Idle and peak memory | Sample process-tree working set **and** private committed bytes at 20 ms or finer when practical. Record pre-load baseline, loaded/idle after 60 s, cold and warm speaking peaks, and residual after 60 s. Separate host/runtime/worker processes; note sampling limits. Repeat 3 times. |
+| CPU and latency | On CPU only, record thread count, total/process CPU time, wall time, first audio chunk, complete audio duration, real-time factor (audio seconds ÷ wall seconds), and cold/warm variance. Test short navigation text, ordinary sentences, and a long paragraph; repeat 5 times after warm-up and 3 cold launches. Include one-thread results and a realistic default configuration. |
+| SAPI first-audio latency | Measure from the caller submitting `Speak` to the first non-empty PCM write delivered to the SAPI engine site (instrument the adapter at `ISpTTSEngineSite::Write`; do not substitute server readiness, HTTP first-byte, first boundary event, or full `Speak` completion). On a warm resident server, test one letter, a short word, a short navigation phrase, and a sentence; run at least 20 iterations per input and report median/p95. Repeat under rapid manipulation: submit, purge/stop, immediately submit changed text, and rapid successive short utterances. Record canceled requests, stale audio, gaps/overlap, CPU, and full completion time. Report server/model warm, process cold, and genuine cold asset-load conditions separately. Target: warm first PCM delivered to SAPI at or below 600 ms for a letter/short word under rapid manipulation; treat this as a product target, not as a directly comparable reproduction of another system's browser benchmark. |
+| Speech quality | Render identical passages for all models and a local reference voice. Include punctuation, questions, proper names, abbreviations, dates/times, numbers, Unicode, and at least one long passage. Blind-listen with at least two listeners if available; log intelligibility errors, clipping, looping, omissions, prosody, and fatigue. Automated WER/UTMOS can supplement but cannot replace listening. Keep labeled WAVs and text. |
+| Voice cloning | For each model, synthesize the same short and long text from two clean, consented English audio prompts with distinct speakers. Record prompt import/export time, state bytes, warm state load time, similarity by listening, prompt noise transfer, and whether imported states work fully offline. Test invalid/missing prompt handling. |
+| Offline behavior | After downloading all required assets, disconnect network and clear only nonessential caches. Repeat load, cloning from a local audio prompt, and synthesis. Watch network attempts and unexpected persisted text/audio. |
+
+Use identical text and prompts, stable power settings, and no competing heavy load. Preserve raw CSV/JSON, commands, logs, and audio alongside a short findings report, with private prompt recordings excluded from public artifacts unless their owner explicitly permits release. Do not infer install size from parameter count or speed from Kyutai's hardware.
+
+## Provisional decision rules
+
+These thresholds are design goals for a **complete** offline product, subject to the target laptop baseline; exceeding them requires an explicit documented tradeoff, not a silent pass.
+
+1. **Required:** cloning works locally with the official gated weights, and rendered speech is intelligible without repeated omissions, loops, or crashes. At least one model must pass blind-listening review for prolonged reading. The 1.9M experimental model is an optional tier unless its quality clears the same review.
+2. **Required:** warm synthesis exceeds 1× real time on the target CPU; preferred margin is at least 2×. First audible audio for short navigation text should be at most 750 ms warm, preferred at most 300 ms. Results with per-utterance process launch count as cold and must be assessed against NVDA use.
+   **SAPI responsiveness subgate:** first PCM delivered to SAPI for a warm single letter and short word should be at or below 600 ms at p95 during rapid stop/restart testing, with no stale or overlapping audio. This is measured at the SAPI engine-site write boundary; HTTP/server first-byte is supporting diagnostics only. The cited Kokoro ~600 ms number is a single-machine browser estimate and is context, not an apples-to-apples baseline.
+3. **Resource target:** projected offline installer at most 100 MiB preferred, 250 MiB hard review boundary; loaded incremental idle working set at most 150 MiB preferred and incremental sampled peak at most 300 MiB preferred. Record full host/process-tree figures so these increments are reproducible. A model's few-megabyte weight file alone is insufficient evidence.
+4. **Required:** no synthesis or cloning dependency on network after install; cache-miss behavior is explicit and testable. Model and sample-voice redistribution rights must be resolved before a distributable installer.
+5. **GO:** choose the smallest model/runtime combination that passes quality, cloning, responsiveness, offline, and licensing checks, with a documented packaging projection. **HOLD:** benchmark is incomplete, access terms unresolved, or results need retesting. **STOP:** no official cloning model meets functional or usable-reading requirements on the target machine. A later architecture change needs a new gate decision.
+
+No SAPI implementation starts while Gate 1 is HOLD or STOP.
