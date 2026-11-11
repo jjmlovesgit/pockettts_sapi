@@ -40,3 +40,7 @@ Latest compatibility and latency evidence is recorded in [Windows app compatibil
 
 Project handoff and conversation link: [notes.md](notes.md).
 
+## Acknowledgments and licenses
+
+Pocket TTS is created by [Kyutai](https://github.com/kyutai-labs/pocket-tts). This is an independent Windows SAPI adapter and is not made or endorsed by Kyutai. The runtime is MIT licensed; model weights, tokenizers, and bundled demo voices carry their own CC BY 4.0 attribution and license terms. The included English Alba voice is attributed to Alba MacKenna. SoundTouch, by Olli Parviainen and contributors, is used under LGPL-2.1. Full license texts, asset attributions, source revisions, and change notes are included in `C:\Program Files\PocketTTS\LICENSES` after installation. Paradee-SAPI was consulted as a separate Windows integration reference; its code and model are not part of this project.
+
