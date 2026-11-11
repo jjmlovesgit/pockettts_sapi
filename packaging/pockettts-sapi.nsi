@@ -260,7 +260,8 @@ Section "-Pocket TTS SAPI base" SEC_MAIN
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PocketTTS-SAPI" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   CreateDirectory "$SMPROGRAMS\Pocket TTS"
-  CreateShortcut "$SMPROGRAMS\Pocket TTS\Voice Manager.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-NoProfile -STA -ExecutionPolicy Bypass -File "$INSTDIR\tools\VoiceManager.ps1" -InstallRoot "$INSTDIR"' "$INSTDIR\pockettts-pocket.ico" 0
+  CreateShortcut "$SMPROGRAMS\Pocket TTS\Voice Manager.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-WindowStyle Hidden -NoProfile -STA -ExecutionPolicy Bypass -File "$INSTDIR\tools\VoiceManager.ps1" -InstallRoot "$INSTDIR"' "$INSTDIR\pockettts-pocket.ico" 0
+  CreateShortcut "$DESKTOP\Pocket TTS Voice Manager.lnk" "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" '-WindowStyle Hidden -NoProfile -STA -ExecutionPolicy Bypass -File "$INSTDIR\tools\VoiceManager.ps1" -InstallRoot "$INSTDIR"' "$INSTDIR\pockettts-pocket.ico" 0
   !insertmacro RecordTiming install english $BaseStartTick
 SectionEnd
 
@@ -321,6 +322,7 @@ uninstall_remove_voices_safe:
   ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\tools\remove-user-voices.ps1"'
 uninstall_remove_voices_done:
   Delete "$SMPROGRAMS\Pocket TTS\Voice Manager.lnk"
+  Delete "$DESKTOP\Pocket TTS Voice Manager.lnk"
   RMDir "$SMPROGRAMS\Pocket TTS"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PocketTTS-SAPI"
   RMDir /r "$INSTDIR"
