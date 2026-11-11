@@ -91,12 +91,18 @@ ShowUnInstDetails show
 !insertmacro MUI_PAGE_LICENSE "${STAGE}\LICENSES\NOTICE.txt"
 !define MUI_COMPONENTSPAGE_SMALLDESC
 !insertmacro MUI_PAGE_COMPONENTS
-!insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
 Section "English: Alba (6.9M, included)" SEC_ENGLISH
   SectionIn RO
+  ; The SAPI COM server and maintenance scripts are machine-wide/elevated.
+  ; Keep them under the inherited Program Files ACL, even if /D overrides InstallDir.
+  StrCmp $INSTDIR "$PROGRAMFILES64\PocketTTS" install_root_ok
+  BringToFront
+  MessageBox MB_ICONSTOP|MB_TOPMOST|MB_SETFOREGROUND "Pocket TTS must be installed to $PROGRAMFILES64\PocketTTS so Windows can safely load its machine-wide SAPI engine."
+  Abort
+install_root_ok:
   System::Call 'kernel32::GetTickCount() i .r0'
   StrCpy $InstallStartTick $0
   FileOpen $1 "$TEMP\PocketTTS-Setup-Timings.csv" w
@@ -280,7 +286,13 @@ SectionEnd
 
 Section "Uninstall"
   SetRegView 64
+  ; Older builds allowed user-writable install paths. Never elevate scripts from one.
+  StrCmp $INSTDIR "$PROGRAMFILES64\PocketTTS" uninstall_root_safe
+  DetailPrint "Skipping install-folder maintenance scripts because this is not the protected Pocket TTS location."
+  Goto uninstall_scripts_done
+uninstall_root_safe:
   ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\tools\stop-worker.ps1" -InstallRoot "$INSTDIR"'
+uninstall_scripts_done:
   ReadRegStr $0 HKLM "Software\Classes\CLSID\${CLSID}\InprocServer32" ""
   ${If} $0 == "$INSTDIR\pocket_sapi.dll"
     !insertmacro RemovePackToken french
@@ -303,7 +315,11 @@ Section "Uninstall"
     DeleteRegValue HKLM "Software\PocketTTS" "ModelLanguage"
     DeleteRegKey /ifempty HKLM "Software\PocketTTS"
   ${EndIf}
+  StrCmp $INSTDIR "$PROGRAMFILES64\PocketTTS" uninstall_remove_voices_safe
+  Goto uninstall_remove_voices_done
+uninstall_remove_voices_safe:
   ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\tools\remove-user-voices.ps1"'
+uninstall_remove_voices_done:
   Delete "$SMPROGRAMS\Pocket TTS\Voice Manager.lnk"
   RMDir "$SMPROGRAMS\Pocket TTS"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\PocketTTS-SAPI"
