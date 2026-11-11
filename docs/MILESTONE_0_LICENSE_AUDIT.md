@@ -16,7 +16,7 @@ Updated 2026-11-09: The upstream Pocket TTS source is MIT; the model and tokeniz
 
 Sources: [Pocket TTS MIT license](https://github.com/kyutai-labs/pocket-tts/blob/main/LICENSE), [model card and gated conditions](https://huggingface.co/kyutai/pocket-tts), [tokenizer card](https://huggingface.co/kyutai/pocket-tts-without-voice-cloning), [Butter voice donations](https://huggingface.co/kyutai/tts-voices), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-Before a public release, verify the exact accepted Hugging Face gated conditions and produce a license inventory for dependencies embedded in the official Rust runtime and the Windows adapter. The published model card shows use conditions, including a ban on unauthorized voice cloning; it does not show a redistribution ban. The project must show the consent reminder for user-imported prompts and must not imply that a file selection establishes speaker consent.
+Before broad or non-evaluation distribution, verify the exact accepted Hugging Face gated conditions and complete a license inventory for dependencies embedded in the official Rust runtime and Windows adapter. The published model card shows use conditions, including a ban on unauthorized voice cloning; it does not show a redistribution ban. The project must show the consent reminder for user-imported prompts and must not imply that a file selection establishes speaker consent. The public GitHub asset is marked as an evaluation pre-release.
 
 ## Result
 
