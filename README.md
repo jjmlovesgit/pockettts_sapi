@@ -4,11 +4,11 @@ This is a separate Windows SAPI 5 integration project for [Kyutai Pocket TTS](ht
 
 The target is selectable, offline English voices in Windows applications, with Pocket TTS audio-prompt voice cloning preserved as a supported utility. [Paradee-SAPI](https://github.com/jjmlovesgit/paradee-sapi) informs Windows integration and verification only. Its model, performance, and footprint are not Pocket TTS claims.
 
-This repository is a source and documentation backup. It does not include installer binaries, downloaded model weights, generated voice states, source prompt audio, raw benchmark recordings, or local caches. The evaluation installer is attached to the [GitHub pre-release](https://github.com/jjmlovesgit/pockettts_sapi/releases/tag/v0.1.0-evaluation); optional language packs download during setup. Review the [license audit](docs/MILESTONE_0_LICENSE_AUDIT.md) for attribution and model terms.
+This repository is a source and documentation backup. It does not include installer binaries, downloaded model weights, generated voice states, source prompt audio, raw benchmark recordings, or local caches. The evaluation installer is attached to the [GitHub pre-release](https://github.com/jjmlovesgit/pockettts_sapi/releases/tag/v0.1.1-evaluation); optional language packs download during setup. Review the [license audit](docs/MILESTONE_0_LICENSE_AUDIT.md) for attribution and model terms.
 
 ## Quick Start
 
-1. Download and run [PocketTTS-SAPI-Setup.exe](https://github.com/jjmlovesgit/pockettts_sapi/releases/download/v0.1.0-evaluation/PocketTTS-SAPI-Setup.exe). Setup requires administrator approval.
+1. Download and run [PocketTTS-SAPI-Setup.exe](https://github.com/jjmlovesgit/pockettts_sapi/releases/download/v0.1.1-evaluation/PocketTTS-SAPI-Setup.exe). Setup requires administrator approval.
 2. Accept the license screen. **English: Alba (6.9M)** is included. Check any optional language packs you want; each selected pack downloads about 220–227 MB during setup and then works offline.
 3. Use the Start menu shortcut **Pocket TTS → Voice Manager** to clone a voice from an audio prompt. Or open PowerShell and run:
 

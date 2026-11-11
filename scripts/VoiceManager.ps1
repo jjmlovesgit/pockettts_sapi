@@ -286,7 +286,7 @@ $audioBox.Location = New-Object Drawing.Point(110, 215)
 $audioBox.Size = New-Object Drawing.Size(380, 24)
 $form.Controls.Add($audioBox)
 $browse = New-Object Windows.Forms.Button
-$browse.Text = 'Browse…'
+$browse.Text = 'Browse...'
 $browse.Location = New-Object Drawing.Point(500, 213)
 $browse.Size = New-Object Drawing.Size(86, 28)
 $form.Controls.Add($browse)
@@ -379,7 +379,7 @@ $create.Add_Click({
         $statePath = Join-Path $voiceDir ($id + '.safetensors')
         $tempPath = $statePath + '.tmp'
         $promptPaths = New-VoicePromptVariants $source $id
-        $status.Text = 'Creating the voice state… The first conversion may take a little while.'
+        $status.Text = 'Creating the voice state... The first conversion may take a little while.'
         $form.Refresh()
         $env:HF_HUB_CACHE = $modelCache
         $env:HF_HUB_OFFLINE = '1'
