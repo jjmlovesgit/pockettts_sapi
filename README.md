@@ -36,6 +36,28 @@ This repository is a source and documentation backup. It does not include instal
 
 4. Fully exit and reopen Edge to refresh its Read Aloud voice list. In NVDA, choose **Microsoft Speech API version 5 (64 bit)** and leave **Use modern audio output system (WASAPI)** unchecked for Pocket voices.
 
+### Setting the Windows default voice for apps such as Discord
+
+Windows has separate voice settings for classic SAPI and OneCore. The voice picker in `sapi.cpl` sets the classic SAPI default; Narrator has its own picker under **Settings → Accessibility → Narrator**. Neither necessarily changes the OneCore default used by every app. On our test system, Discord followed the current user's OneCore default, so changing the classic SAPI default did not change Discord's voice.
+
+If an app follows OneCore and continues using a Microsoft voice, you can set the current user's OneCore default to the installed Pocket TTS Alba token in PowerShell:
+
+```powershell
+$oneCoreVoices = 'HKCU:\Software\Microsoft\Speech_OneCore\Voices'
+Set-ItemProperty -Path $oneCoreVoices -Name DefaultTokenId -Type String `
+  -Value 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\PocketTTSDefaultAlba'
+```
+
+Close and reopen the target app after changing the default. To restore Microsoft David, run:
+
+```powershell
+$oneCoreVoices = 'HKCU:\Software\Microsoft\Speech_OneCore\Voices'
+Set-ItemProperty -Path $oneCoreVoices -Name DefaultTokenId -Type String `
+  -Value 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_enUS_DavidM'
+```
+
+This is a per-user Windows setting. The command assumes Alba is installed and registered. Windows apps choose which speech API and default-selection behavior they use, so this setting does not guarantee that every app will use Alba. Do not edit the registry if the Alba token is not present; first confirm that the voice pack is installed.
+
 The English model and installed voices run offline. The published Setup installer is unsigned; its SHA-256 is listed in the release notes.
 
 Latest compatibility and latency evidence is recorded in [Windows app compatibility](docs/WINDOWS_APP_COMPATIBILITY.md), [NVDA voice benchmark](docs/NVDA_VOICE_BENCHMARK.md), [SAPI latency benchmark](docs/SAPI_LATENCY_BENCHMARK.md), and [SAPI rate benchmark](docs/SAPI_RATE_BENCHMARK.md). SAPI rate control selects slow, normal, and fast cached voice states; classic SAPI rate and XML tests pass. The latest local proof passed 20 rapid stop/restart trials per rate band. Edge Read Aloud highlighting passed. In NVDA 2026.3.1, Pocket voice selection fell back to Alba with "Use modern audio output system (WASAPI)" enabled; turning that NVDA option off allowed cloned and language tokens to reach the engine. The WASAPI-on path and NVDA navigation latency remain open.
