@@ -36,27 +36,11 @@ This repository is a source and documentation backup. It does not include instal
 
 4. Fully exit and reopen Edge to refresh its Read Aloud voice list. In NVDA, choose **Microsoft Speech API version 5 (64 bit)** and leave **Use modern audio output system (WASAPI)** unchecked for Pocket voices.
 
-### Setting the Windows default voice for apps such as Discord
+### Choosing the Windows app default voice
 
-Windows has separate voice settings for classic SAPI and OneCore. The voice picker in `sapi.cpl` sets the classic SAPI default; Narrator has its own picker under **Settings → Accessibility → Narrator**. Neither necessarily changes the OneCore default used by every app. On our test system, Discord followed the current user's OneCore default, so changing the classic SAPI default did not change Discord's voice.
+The updated Voice Manager adds a Windows default voice dropdown. Select an installed voice and choose **Preview choice** to hear it before changing defaults. **Set as default** changes this user's OneCore default and, when the selected voice has a matching token, the classic SAPI default too. **Restore previous** puts both prior settings back. These are per-user settings and do not require administrator approval. The published 0.1.1 installer predates this control. If you already have Pocket TTS installed and a project checkout, run `Run-PocketTTS-Voice-Manager.cmd` from the checkout to open the updated manager against the existing install; this does not reinstall Pocket TTS.
 
-If an app follows OneCore and continues using a Microsoft voice, you can set the current user's OneCore default to the installed Pocket TTS Alba token in PowerShell:
-
-```powershell
-$oneCoreVoices = 'HKCU:\Software\Microsoft\Speech_OneCore\Voices'
-Set-ItemProperty -Path $oneCoreVoices -Name DefaultTokenId -Type String `
-  -Value 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\PocketTTSDefaultAlba'
-```
-
-Close and reopen the target app after changing the default. To restore Microsoft David, run:
-
-```powershell
-$oneCoreVoices = 'HKCU:\Software\Microsoft\Speech_OneCore\Voices'
-Set-ItemProperty -Path $oneCoreVoices -Name DefaultTokenId -Type String `
-  -Value 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\MSTTS_V110_enUS_DavidM'
-```
-
-This is a per-user Windows setting. The command assumes Alba is installed and registered. Windows apps choose which speech API and default-selection behavior they use, so this setting does not guarantee that every app will use Alba. Do not edit the registry if the Alba token is not present; first confirm that the voice pack is installed.
+To use Pocket TTS in Chrome Reading mode, set **Alba (Pocket TTS)** as the Windows default with Voice Manager, fully exit and reopen Chrome, then select **System text-to-speech voice** under Reading mode's **Settings → Voice selection**. Chrome does not list Alba by name there; the system option uses the Windows default. This flow was confirmed on the development machine. The Google US/UK Natural choices are Chrome-provided voices. Other Windows apps may use OneCore, classic SAPI, Narrator settings, or an app-specific voice choice, so restart them after changing a default.
 
 The English model and installed voices run offline. The published Setup installer is unsigned; its SHA-256 is listed in the release notes.
 

@@ -251,8 +251,8 @@ $form.Text = 'Pocket TTS Voice Manager'
 $iconPath = Join-Path $InstallRoot 'pockettts-pocket.ico'
 if (Test-Path -LiteralPath $iconPath) { $form.Icon = [Drawing.Icon]::new($iconPath) }
 $form.StartPosition = 'CenterScreen'
-$form.Size = New-Object Drawing.Size(620, 520)
-$form.MinimumSize = New-Object Drawing.Size(620, 520)
+$form.Size = New-Object Drawing.Size(620, 650)
+$form.MinimumSize = New-Object Drawing.Size(620, 650)
 
 $voicesLabel = New-Object Windows.Forms.Label
 $voicesLabel.Text = 'Installed custom voices'
@@ -314,24 +314,64 @@ $previewBox.Location = New-Object Drawing.Point(110, 352)
 $previewBox.Size = New-Object Drawing.Size(476, 24)
 $form.Controls.Add($previewBox)
 
+$defaultGroup = New-Object Windows.Forms.GroupBox
+$defaultGroup.Text = 'Windows app defaults (OneCore and classic SAPI)'
+$defaultGroup.Location = New-Object Drawing.Point(16, 390)
+$defaultGroup.Size = New-Object Drawing.Size(570, 122)
+$form.Controls.Add($defaultGroup)
+
+$defaultVoiceLabel = New-Object Windows.Forms.Label
+$defaultVoiceLabel.Text = 'Voice'
+$defaultVoiceLabel.Location = New-Object Drawing.Point(12, 25)
+$defaultVoiceLabel.AutoSize = $true
+$defaultGroup.Controls.Add($defaultVoiceLabel)
+$defaultVoiceList = New-Object Windows.Forms.ComboBox
+$defaultVoiceList.Location = New-Object Drawing.Point(90, 21)
+$defaultVoiceList.Size = New-Object Drawing.Size(462, 24)
+$defaultVoiceList.DropDownStyle = [Windows.Forms.ComboBoxStyle]::DropDownList
+$defaultVoiceList.DisplayMember = 'Name'
+$defaultGroup.Controls.Add($defaultVoiceList)
+
+$defaultStatus = New-Object Windows.Forms.Label
+$defaultStatus.Text = ''
+$defaultStatus.Location = New-Object Drawing.Point(12, 51)
+$defaultStatus.Size = New-Object Drawing.Size(540, 24)
+$defaultGroup.Controls.Add($defaultStatus)
+
+$setDefault = New-Object Windows.Forms.Button
+$setDefault.Text = 'Set as default'
+$setDefault.Location = New-Object Drawing.Point(190, 79)
+$setDefault.Size = New-Object Drawing.Size(170, 30)
+$defaultGroup.Controls.Add($setDefault)
+$restoreDefault = New-Object Windows.Forms.Button
+$restoreDefault.Text = 'Restore previous'
+$restoreDefault.Location = New-Object Drawing.Point(370, 79)
+$restoreDefault.Size = New-Object Drawing.Size(170, 30)
+$defaultGroup.Controls.Add($restoreDefault)
+$previewDefault = New-Object Windows.Forms.Button
+$previewDefault.Text = 'Preview choice'
+$previewDefault.Location = New-Object Drawing.Point(10, 79)
+$previewDefault.Size = New-Object Drawing.Size(170, 30)
+$defaultGroup.Controls.Add($previewDefault)
+
 $create = New-Object Windows.Forms.Button
 $create.Text = 'Create and register voice'
-$create.Location = New-Object Drawing.Point(16, 405)
+$create.Location = New-Object Drawing.Point(16, 530)
 $create.Size = New-Object Drawing.Size(200, 34)
 $form.Controls.Add($create)
 $preview = New-Object Windows.Forms.Button
-$preview.Text = 'Preview selected'
-$preview.Location = New-Object Drawing.Point(230, 405)
+$preview.Text = 'Preview selected clone'
+$preview.Location = New-Object Drawing.Point(230, 530)
 $preview.Size = New-Object Drawing.Size(150, 34)
 $form.Controls.Add($preview)
 $remove = New-Object Windows.Forms.Button
 $remove.Text = 'Remove selected'
-$remove.Location = New-Object Drawing.Point(390, 405)
+$remove.Location = New-Object Drawing.Point(390, 530)
 $remove.Size = New-Object Drawing.Size(100, 34)
 $form.Controls.Add($remove)
 $close = New-Object Windows.Forms.Button
 $close.Text = 'Close'
-$close.Location = New-Object Drawing.Point(500, 405)
+$close.Location = New-Object Drawing.Point(500, 530)
 $close.Size = New-Object Drawing.Size(86, 34)
 $form.Controls.Add($close)
 
@@ -347,6 +387,208 @@ function Refresh-VoiceList {
         [void]$voiceList.Items.Add([pscustomobject]@{ Name=$label; Path=$_.PSPath; Id=$_.PSChildName })
     }
 }
+
+$oneCoreTokenRoots = @(
+    'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens',
+    'Registry::HKEY_CURRENT_USER\Software\Microsoft\Speech_OneCore\Voices\Tokens'
+)
+$oneCoreDefaultKey = 'HKCU:\Software\Microsoft\Speech_OneCore\Voices'
+$classicDefaultKey = 'HKCU:\Software\Microsoft\Speech\Voices'
+$classicTokenRoots = @(
+    'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens',
+    'Registry::HKEY_CURRENT_USER\Software\Microsoft\Speech\Voices\Tokens'
+)
+$defaultBackupKey = 'HKCU:\Software\PocketTTS\VoiceManager'
+
+function Get-ClassicVoiceTokenPath([string]$OneCoreTokenPath) {
+    $tokenId = $OneCoreTokenPath.Split('\')[-1]
+    foreach ($root in $classicTokenRoots) {
+        $key = Join-Path $root $tokenId
+        if (-not (Test-Path -LiteralPath $key)) { continue }
+        $hive = if ($root -match 'HKEY_LOCAL_MACHINE') { 'HKEY_LOCAL_MACHINE' } else { 'HKEY_CURRENT_USER' }
+        $relativeRoot = $root -replace '^Registry::HKEY_(LOCAL_MACHINE|CURRENT_USER)\\', ''
+        return $hive + '\' + $relativeRoot + '\' + $tokenId
+    }
+    return $null
+}
+
+function Refresh-OneCoreVoiceList {
+    $defaultVoiceList.Items.Clear()
+    foreach ($root in $oneCoreTokenRoots) {
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        $hive = if ($root -match 'HKEY_LOCAL_MACHINE') { 'HKEY_LOCAL_MACHINE' } else { 'HKEY_CURRENT_USER' }
+        $relativeRoot = $root -replace '^Registry::HKEY_(LOCAL_MACHINE|CURRENT_USER)\\', ''
+        foreach ($key in Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue) {
+            $tokenPath = $hive + '\' + $relativeRoot + '\' + $key.PSChildName
+            $properties = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
+            $name = $properties.DisplayName
+            if (-not $name) { $name = $key.GetValue('') }
+            if (-not $name) {
+                $attributes = Join-Path $key.PSPath 'Attributes'
+                $name = (Get-ItemProperty -LiteralPath $attributes -Name Name -ErrorAction SilentlyContinue).Name
+            }
+            if (-not $name) { $name = $key.PSChildName }
+            [void]$defaultVoiceList.Items.Add([pscustomobject]@{Name=[string]$name;TokenPath=$tokenPath})
+        }
+    }
+    $current = (Get-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+    $selectedIndex = -1
+    $currentVoice = $null
+    for ($index = 0; $index -lt $defaultVoiceList.Items.Count; $index++) {
+        $voice = $defaultVoiceList.Items[$index]
+        if ($voice.TokenPath -eq $current) { $selectedIndex = $index; $currentVoice = $voice.Name; break }
+    }
+    if ($selectedIndex -ge 0) { $defaultVoiceList.SelectedIndex = $selectedIndex }
+    $classicCurrent = (Get-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+    $classicVoice = $null
+    if ($classicCurrent) {
+        foreach ($root in $classicTokenRoots) {
+            if (-not (Test-Path -LiteralPath $root)) { continue }
+            foreach ($key in Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue) {
+                $hive = if ($root -match 'HKEY_LOCAL_MACHINE') { 'HKEY_LOCAL_MACHINE' } else { 'HKEY_CURRENT_USER' }
+                $relativeRoot = $root -replace '^Registry::HKEY_(LOCAL_MACHINE|CURRENT_USER)\\', ''
+                if (($hive + '\' + $relativeRoot + '\' + $key.PSChildName) -eq $classicCurrent) {
+                    $properties = Get-ItemProperty -LiteralPath $key.PSPath -ErrorAction SilentlyContinue
+                    $classicVoice = $properties.DisplayName
+                    if (-not $classicVoice) { $classicVoice = $key.GetValue('') }
+                    if (-not $classicVoice) { $classicVoice = $key.PSChildName }
+                    break
+                }
+            }
+            if ($classicVoice) { break }
+        }
+    }
+    if (-not $currentVoice -and $current) { $currentVoice = 'unlisted OneCore voice' }
+    if (-not $classicVoice -and $classicCurrent) { $classicVoice = 'unlisted SAPI voice' }
+    if ($currentVoice -or $classicVoice) { $defaultStatus.Text = "Current: OneCore $currentVoice; SAPI $classicVoice" }
+    else { $defaultStatus.Text = 'Windows has no saved per-user voice defaults.' }
+    $backup = Get-ItemProperty -LiteralPath $defaultBackupKey -ErrorAction SilentlyContinue
+    $restoreDefault.Enabled = ($null -ne $backup -and (
+        $backup.PSObject.Properties.Name -contains 'PreviousOneCoreDefaultTokenId' -or
+        $backup.PSObject.Properties.Name -contains 'PreviousClassicDefaultTokenId' -or
+        $backup.PSObject.Properties.Name -contains 'PreviousDefaultTokenId'
+    ))
+}
+
+$setDefault.Add_Click({
+    try {
+        $selected = $defaultVoiceList.SelectedItem
+        if (-not $selected) { throw 'Select a registered Windows OneCore voice first.' }
+        $tokenHivePath = 'Registry::' + $selected.TokenPath
+        if (-not (Test-Path -LiteralPath $tokenHivePath)) { throw 'That voice token is no longer registered. Reopen Voice Manager to refresh the list.' }
+        New-Item -Path $oneCoreDefaultKey -Force | Out-Null
+        New-Item -Path $classicDefaultKey -Force | Out-Null
+        New-Item -Path $defaultBackupKey -Force | Out-Null
+        $oneCoreCurrent = (Get-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+        $classicCurrent = (Get-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+        $classicSelected = Get-ClassicVoiceTokenPath $selected.TokenPath
+        $shouldSetOneCore = ($oneCoreCurrent -ne $selected.TokenPath)
+        $shouldSetClassic = ($classicSelected -and $classicCurrent -ne $classicSelected)
+        if ($shouldSetOneCore -or $shouldSetClassic) {
+            $existingBackup = Get-ItemProperty -LiteralPath $defaultBackupKey -ErrorAction SilentlyContinue
+            $previousOneCoreToSave = [string]$oneCoreCurrent
+            $previousOneCoreWasSetToSave = [bool]$oneCoreCurrent
+            if ($existingBackup -and
+                $existingBackup.PSObject.Properties.Name -notcontains 'PreviousOneCoreDefaultTokenId' -and
+                $existingBackup.PSObject.Properties.Name -contains 'PreviousDefaultTokenId') {
+                $previousOneCoreToSave = [string]$existingBackup.PreviousDefaultTokenId
+                $previousOneCoreWasSetToSave = [bool]$existingBackup.PreviousDefaultWasSet
+            }
+            New-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousOneCoreDefaultTokenId -Value $previousOneCoreToSave -PropertyType String -Force | Out-Null
+            New-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousOneCoreDefaultWasSet -Value ([int]$previousOneCoreWasSetToSave) -PropertyType DWord -Force | Out-Null
+            New-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousClassicDefaultTokenId -Value ([string]$classicCurrent) -PropertyType String -Force | Out-Null
+            New-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousClassicDefaultWasSet -Value ([int][bool]$classicCurrent) -PropertyType DWord -Force | Out-Null
+        }
+        if ($shouldSetOneCore) {
+            Set-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -Value $selected.TokenPath -Type String
+        }
+        if ($shouldSetClassic) {
+            Set-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -Value $classicSelected -Type String
+        }
+        Refresh-OneCoreVoiceList
+        if ($classicSelected) { $defaultStatus.Text = "Set $($selected.Name) as this user's SAPI and OneCore defaults. Restart the target app." }
+        else { $defaultStatus.Text = "Set $($selected.Name) as this user's OneCore default; no matching SAPI token was found." }
+    } catch {
+        [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Pocket TTS Voice Manager', 'OK', 'Error') | Out-Null
+    }
+})
+
+$restoreDefault.Add_Click({
+    try {
+        $backup = Get-ItemProperty -LiteralPath $defaultBackupKey -ErrorAction Stop
+        $hasOneCoreBackup = $backup.PSObject.Properties.Name -contains 'PreviousOneCoreDefaultTokenId'
+        $hasClassicBackup = $backup.PSObject.Properties.Name -contains 'PreviousClassicDefaultTokenId'
+        $hasLegacyBackup = $backup.PSObject.Properties.Name -contains 'PreviousDefaultTokenId'
+        if (-not ($hasOneCoreBackup -or $hasClassicBackup -or $hasLegacyBackup)) { throw 'No previous speech defaults have been saved yet.' }
+        $restoreOneCore = $hasOneCoreBackup -or $hasLegacyBackup
+        $restoreClassic = $hasClassicBackup
+        $previousOneCore = $null
+        $previousOneCoreWasSet = $false
+        $previousClassic = $null
+        $previousClassicWasSet = $false
+        if ($hasOneCoreBackup -or $hasLegacyBackup) {
+            $previousOneCore = if ($hasOneCoreBackup) { [string]$backup.PreviousOneCoreDefaultTokenId } else { [string]$backup.PreviousDefaultTokenId }
+            $previousOneCoreWasSet = if ($hasOneCoreBackup) { [bool]$backup.PreviousOneCoreDefaultWasSet } else { [bool]$backup.PreviousDefaultWasSet }
+            if ($previousOneCoreWasSet -and (-not $previousOneCore -or -not (Test-Path -LiteralPath ('Registry::' + $previousOneCore)))) {
+                throw 'The saved previous OneCore voice is no longer installed, so it cannot be restored.'
+            }
+        }
+        if ($hasClassicBackup) {
+            $previousClassic = [string]$backup.PreviousClassicDefaultTokenId
+            $previousClassicWasSet = [bool]$backup.PreviousClassicDefaultWasSet
+            if ($previousClassicWasSet -and (-not $previousClassic -or -not (Test-Path -LiteralPath ('Registry::' + $previousClassic)))) {
+                throw 'The saved previous SAPI voice is no longer installed, so it cannot be restored.'
+            }
+        }
+        New-Item -Path $oneCoreDefaultKey -Force | Out-Null
+        New-Item -Path $classicDefaultKey -Force | Out-Null
+        if ($restoreOneCore) {
+            if ($previousOneCoreWasSet) { Set-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -Value $previousOneCore -Type String }
+            else { Remove-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue }
+        }
+        if ($restoreClassic) {
+            if ($previousClassicWasSet) { Set-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -Value $previousClassic -Type String }
+            else { Remove-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue }
+        }
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousDefaultTokenId -ErrorAction SilentlyContinue
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousDefaultWasSet -ErrorAction SilentlyContinue
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousOneCoreDefaultTokenId -ErrorAction SilentlyContinue
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousOneCoreDefaultWasSet -ErrorAction SilentlyContinue
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousClassicDefaultTokenId -ErrorAction SilentlyContinue
+        Remove-ItemProperty -LiteralPath $defaultBackupKey -Name PreviousClassicDefaultWasSet -ErrorAction SilentlyContinue
+        Refresh-OneCoreVoiceList
+        $defaultStatus.Text = 'Restored the previous SAPI and OneCore defaults. Restart target apps.'
+    } catch {
+        [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Pocket TTS Voice Manager', 'OK', 'Error') | Out-Null
+    }
+})
+
+$previewDefault.Add_Click({
+    $speaker = $null
+    $token = $null
+    try {
+        $selected = $defaultVoiceList.SelectedItem
+        if (-not $selected) { throw 'Choose a voice in the OneCore dropdown first.' }
+        if (-not $previewBox.Text.Trim()) { throw 'Enter preview text first.' }
+        $tokenPath = 'Registry::' + $selected.TokenPath
+        if (-not (Test-Path -LiteralPath $tokenPath)) { throw 'That voice is no longer registered. Reopen Voice Manager to refresh the list.' }
+        $tokenId = $selected.TokenPath.Split('\')[-1]
+        $classicTokenPath = Join-Path $tokenRoot $tokenId
+        $previewTokenId = if (Test-Path -LiteralPath $classicTokenPath) {
+            'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\' + $tokenId
+        } else { $selected.TokenPath }
+        $token = New-Object -ComObject SAPI.SpObjectToken
+        $token.SetId($previewTokenId, '', $false)
+        $speaker = New-Object -ComObject SAPI.SpVoice
+        $speaker.Voice = $token
+        [void]$speaker.Speak($previewBox.Text.Trim())
+    } catch {
+        [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Pocket TTS Voice Manager', 'OK', 'Error') | Out-Null
+    } finally {
+        if ($speaker) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($speaker) }
+        if ($token) { [void][Runtime.InteropServices.Marshal]::ReleaseComObject($token) }
+    }
+})
 
 $browse.Add_Click({
     $dialog = New-Object Windows.Forms.OpenFileDialog
@@ -407,6 +649,7 @@ $create.Add_Click({
         }
         $status.Text = 'Voice created and registered for Windows apps.'
         Refresh-VoiceList
+        Refresh-OneCoreVoiceList
     } catch {
         $status.Text = $_.Exception.Message
         [Windows.Forms.MessageBox]::Show($_.Exception.Message, 'Pocket TTS Voice Manager', 'OK', 'Error') | Out-Null
@@ -416,6 +659,14 @@ $create.Add_Click({
 $remove.Add_Click({
     $item = $voiceList.SelectedItem
     if (-not $item) { return }
+    $currentOneCoreDefault = (Get-ItemProperty -LiteralPath $oneCoreDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+    $currentClassicDefault = (Get-ItemProperty -LiteralPath $classicDefaultKey -Name DefaultTokenId -ErrorAction SilentlyContinue).DefaultTokenId
+    $oneCoreVoicePath = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech_OneCore\Voices\Tokens\' + $item.Id
+    $classicVoicePath = 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Speech\Voices\Tokens\' + $item.Id
+    if ($currentOneCoreDefault -eq $oneCoreVoicePath -or $currentClassicDefault -eq $classicVoicePath) {
+        [Windows.Forms.MessageBox]::Show('This voice is a current Windows default. Select a different default voice above, then remove it.', 'Pocket TTS Voice Manager', 'OK', 'Information') | Out-Null
+        return
+    }
     $key = Join-Path $tokenRoot $item.Id
     $registered = (Get-ItemProperty -LiteralPath $key -Name CLSID -ErrorAction SilentlyContinue).CLSID
     if ($registered -ne $clsid) {
@@ -454,6 +705,7 @@ $remove.Add_Click({
         }
     }
     Refresh-VoiceList
+    Refresh-OneCoreVoiceList
     $status.Text = 'Removed from SAPI and OneCore. Restart speech apps to refresh their voice lists.'
 })
 
@@ -484,4 +736,5 @@ $preview.Add_Click({
 
 $close.Add_Click({ $form.Close() })
 Refresh-VoiceList
+Refresh-OneCoreVoiceList
 [void]$form.ShowDialog()
